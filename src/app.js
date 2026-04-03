@@ -20,4 +20,10 @@ app.get("/", (req, res) => {
   res.json({ message: "Hello World" });
 });
 
+// routes
+
+import userRouter from "./routes/user.route.js";
+
+app.use("/api/v1/user", userRouter);
+
 export default app;
