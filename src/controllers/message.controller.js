@@ -152,7 +152,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 
     // Emit the new messages to the receiver's socket
     const receiverSocketId = userSocketMap[receiverId];
-    if (receiverId) {
+    if (receiverSocketId) {
       io.to(receiverSocketId).emit("newMessage", newMessage);
     }
 
