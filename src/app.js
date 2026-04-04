@@ -64,4 +64,4 @@ import messageRouter from "./routes/message.route.js";
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/messages", messageRouter);
 
-export default app;
+export default server;

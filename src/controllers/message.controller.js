@@ -47,7 +47,7 @@ const getUsersForSidebar = asyncHandler(async (req, res) => {
   } catch (error) {
     console.log("Error: ", error);
     throw new ApiError(
-      error.stausCode || 500,
+      error.statusCode || 500,
       error.message || "Something went wrong while getting sidebar users",
     );
   }
@@ -86,7 +86,7 @@ const getMesages = asyncHandler(async (req, res) => {
   } catch (error) {
     console.log("Error while getting selected user messages: ", error);
     throw new ApiError(
-      error.stausCode || 500,
+      error.statusCode || 500,
       error.message || "Error while getting selected user messages",
     );
   }
@@ -120,44 +120,52 @@ const markMessageAsSeen = asyncHandler(async (req, res) => {
 });
 
 const sendMessage = asyncHandler(async (req, res) => {
-  const { text } = req.body;
-  const imageLocalPath = req.file?.path;
+  try {
+    const { text } = req.body;
+    const imageLocalPath = req.file?.path;
 
-  const receiverId = req.params.id;
-  const senderId = req.user?._id;
+    const receiverId = req.params.id;
+    const senderId = req.user?._id;
 
-  if (!text && !imageLocalPath) {
-    throw new ApiError(400, "Message cannot be empty");
-  }
-
-  let imageUrl = "";
-
-  if (imageLocalPath) {
-    const image = await uploadOnCLoudinary(imageLocalPath);
-
-    if (!image) {
-      throw new ApiError(400, "Error uploading image");
+    if (!text && !imageLocalPath) {
+      throw new ApiError(400, "Message cannot be empty");
     }
 
-    imageUrl = image.secure_url;
+    let imageUrl = "";
+
+    if (imageLocalPath) {
+      const image = await uploadOnCLoudinary(imageLocalPath);
+
+      if (!image) {
+        throw new ApiError(400, "Error uploading image");
+      }
+
+      imageUrl = image.secure_url;
+    }
+
+    const newMessage = await Message.create({
+      senderId,
+      receiverId,
+      text: text?.trim() || "",
+      image: imageUrl,
+    });
+
+    // Emit the new messages to the receiver's socket
+    const receiverSocketId = userSocketMap[receiverId];
+    if (receiverId) {
+      io.to(receiverSocketId).emit("newMessage", newMessage);
+    }
+
+    return res
+      .status(201)
+      .json(new ApiResponse(201, newMessage, "Message sent successfully"));
+  } catch (error) {
+    console.log("Error in sending message: ", error);
+    throw new ApiError(
+      error.statusCode || 500,
+      error.message || "Error in sending message",
+    );
   }
-
-  const newMessage = await Message.create({
-    senderId,
-    receiverId,
-    text: text?.trim() || "",
-    image: imageUrl,
-  });
-
-  // Emit the new messages to the receiver's socket
-  const receiverSocketId = userSocketMap[receiverId];
-  if (receiverId) {
-    io.to(receiverSocketId).emit("newMessage", newMessage);
-  }
-
-  return res
-    .status(201)
-    .json(new ApiResponse(201, newMessage, "Message sent successfully"));
 });
 
 export { getUsersForSidebar, getMesages, markMessageAsSeen, sendMessage };
